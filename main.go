@@ -14,6 +14,20 @@ import (
 )
 
 var counter = 0
+var clusterSize int
+var id int
+var nodeURLs = make([]string, clusterSize)
+
+func generateNodeURLs(clusterSize int) []string {
+	nodeURLs := make([]string, clusterSize)
+	for i := 1; i <= clusterSize; i++ {
+		url := "http://localhost:" + strconv.Itoa(8000+i) + "/increment"
+		nodeURLs = append(nodeURLs, url)
+	}
+	fmt.Println("Available nodes:")
+	fmt.Println(nodeURLs)
+	return nodeURLs
+}
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	resp, err := json.Marshal(payload)
@@ -70,6 +84,7 @@ func main() {
 	fmt.Println("Cluster size:", *clusterSize)
 	fmt.Println("Node id:", *id)
 
+	nodeURLs = generateNodeURLs(*clusterSize)
 	go startServer(*id)
 	startClient()
 }
