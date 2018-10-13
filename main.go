@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/gorilla/mux"
 )
@@ -31,10 +32,11 @@ func incrementHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
 }
 
-func startServer() {
+func startServer(id int) {
 	r := mux.NewRouter()
 	r.HandleFunc("/increment", incrementHandler)
-	log.Fatal(http.ListenAndServe(":8000", r))
+	port := ":" + strconv.Itoa(8000+id)
+	log.Fatal(http.ListenAndServe(port, r))
 }
 
 func startClient() {
@@ -54,6 +56,6 @@ func main() {
 	fmt.Println("Cluster size:", *clusterSize)
 	fmt.Println("Node id:", *id)
 
-	go startServer()
+	go startServer(*id)
 	startClient()
 }
