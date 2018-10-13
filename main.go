@@ -16,20 +16,29 @@ import (
 var counter = 0
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, err := json.Marshal(payload)
+	resp, err := json.Marshal(payload)
 	if err != nil {
 		panic(err)
 	}
 
 	w.Header().Set("Content-Type", "applications/json")
 	w.WriteHeader(code)
-	w.Write(response)
+	w.Write(resp)
 }
 
 func incrementHandler(w http.ResponseWriter, r *http.Request) {
 	counter++
 	fmt.Println(counter)
 	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+}
+
+func sendIncrement() {
+	url := "http://localhost:8002/increment"
+	resp, err := http.Post(url, "application/json", nil)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(resp.Status)
 }
 
 func startServer(id int) {
@@ -45,7 +54,12 @@ func startClient() {
 	for text != "exit" {
 		scanner.Scan()
 		text := scanner.Text()
-		fmt.Println(text)
+		switch text {
+		case "exit":
+			os.Exit(0)
+		case "increment":
+			sendIncrement()
+		}
 	}
 }
 
