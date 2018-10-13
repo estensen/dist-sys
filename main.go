@@ -21,11 +21,13 @@ var nodeURLs = make([]string, clusterSize)
 func generateNodeURLs(clusterSize int) []string {
 	nodeURLs := make([]string, clusterSize)
 	for i := 1; i <= clusterSize; i++ {
-		url := "http://localhost:" + strconv.Itoa(8000+i) + "/increment"
-		nodeURLs = append(nodeURLs, url)
+		url := "http://localhost:" + strconv.Itoa(8000+i)
+		nodeURLs[i-1] = url
 	}
-	fmt.Println("Available nodes:")
-	fmt.Println(nodeURLs)
+	fmt.Println("Available nodes:", len(nodeURLs))
+	for i := range nodeURLs {
+		fmt.Println(nodeURLs[i])
+	}
 	return nodeURLs
 }
 
@@ -42,17 +44,20 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 
 func incrementHandler(w http.ResponseWriter, r *http.Request) {
 	counter++
-	fmt.Println(counter)
+	fmt.Println("Local value:", counter)
 	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
 }
 
 func sendIncrement() {
-	url := "http://localhost:8002/increment"
-	resp, err := http.Post(url, "application/json", nil)
-	if err != nil {
-		panic(err)
+	for i := range nodeURLs {
+		url := nodeURLs[i] + "/increment"
+		_, err := http.Post(url, "application/json", nil)
+		if err != nil {
+			fmt.Printf("Node %d not reachable\n", i)
+		} else {
+			fmt.Printf("Node %d incremented!\n", i)
+		}
 	}
-	fmt.Println(resp.Status)
 }
 
 func startServer(id int) {
