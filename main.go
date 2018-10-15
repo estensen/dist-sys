@@ -11,9 +11,11 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	bolt "go.etcd.io/bbolt"
 )
 
 var counter = 0
+var world = []byte("world")
 var clusterSize int
 var id int
 var nodeURLs = make([]string, clusterSize)
@@ -42,10 +44,57 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(resp)
 }
 
+func saveCountToDb(count int) {
+	db, err := bolt.Open("counter.db", 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	key := []byte("counter")
+	value := []byte(strconv.Itoa(count))
+
+	// Store data
+	err = db.Update(func(tx *bolt.Tx) error {
+		bucket, err := tx.CreateBucketIfNotExists(world)
+		if err != nil {
+			return err
+		}
+
+		err = bucket.Put(key, value)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Retrieve data
+	err = db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(world)
+		if bucket == nil {
+			return fmt.Errorf("Bucket %q not found", world)
+		}
+
+		val := bucket.Get(key)
+		fmt.Println("DB value:", val)
+
+		return nil
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func incrementHandler(w http.ResponseWriter, r *http.Request) {
 	counter++
 	fmt.Println("Local value:", counter)
 	respondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+	saveCountToDb(counter)
 }
 
 func sendIncrement() {
@@ -90,6 +139,7 @@ func main() {
 	fmt.Println("Node id:", *id)
 
 	nodeURLs = generateNodeURLs(*clusterSize)
+
 	go startServer(*id)
 	startClient()
 }
